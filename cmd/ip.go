@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
@@ -15,14 +16,20 @@ var ipCmd = &cobra.Command{
 	Short: "Mostra os IPs local e público da máquina",
 	Long:  `Verifica as interfaces de rede locais do WSL e faz uma requisição rápida para descobrir o IP público de internet.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("🌐 Verificando conexões de rede...")
-		fmt.Println("--------------------------------------------------")
+		// Criando estilos reutilizáveis para organizar o layout
+		cyan := color.New(color.FgCyan).SprintFunc()
+		whiteBold := color.New(color.FgWhite, color.Bold).SprintFunc()
 
+		fmt.Println(cyan("🌐 Verificando conexões de rede..."))
+		fmt.Println(cyan("--------------------------------------------------"))
+
+		// 1. IP Local (Destacando o IP com Amarelo)
 		localIP := getLocalIP()
-		fmt.Printf("💻 IP Local (WSL):  %s\n", localIP)
+		fmt.Printf("💻 %-18s %s\n", whiteBold("IP Local (WSL):"), color.YellowString(localIP))
 
+		// 2. IP Público (Cores dinâmicas se estiver Online ou Offline)
 		publicIP := getPublicIP()
-		fmt.Printf("🌍 IP Público:       %s\n", publicIP)
+		fmt.Printf("🌍 %-18s %s\n", whiteBold("IP Público:"), publicIP)
 	},
 }
 
@@ -49,16 +56,18 @@ func getPublicIP() string {
 
 	resp, err := client.Get("https://api.ipify.org")
 	if err != nil {
-		return "OFFLINE ❌ (Erro ao conectar à internet)"
+		// Retorna vermelho se falhar
+		return color.RedString("OFFLINE ❌ (Erro ao conectar à internet)")
 	}
 	defer resp.Body.Close()
 
 	ipBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "Erro ao ler resposta"
+		return color.RedString("Erro ao ler resposta")
 	}
 
-	return string(ipBytes) + " ✅ (Online)"
+	// Retorna verde se estiver online com o IP público
+	return color.GreenString(string(ipBytes) + " ✅ (Online)")
 }
 
 func init() {
