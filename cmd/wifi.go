@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+	"strconv"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
@@ -14,8 +16,11 @@ var wifiCmd = &cobra.Command{
 	Short: "Lista as redes Wi-Fi disponíveis e a intensidade do sinal",
 	Long:  `Executa o utilitário do Windows para escanear e listar os SSIDs e sinais das redes próximas.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Escaneando redes Wi-Fi próximas...")
-		fmt.Println("--------------------------------------------------")
+		cyan := color.New(color.FgCyan).SprintFunc()
+		whiteBold := color.New(color.FgWhite, color.Bold).SprintFunc()
+
+		fmt.Println(cyan("🔎 Escaneando redes Wi-Fi próximas..."))
+		fmt.Println(cyan("--------------------------------------------------"))
 
 		out, err := exec.Command("cmd.exe", "/c", "netsh wlan show networks mode=bssid").Output()
 		if err != nil {
@@ -42,8 +47,32 @@ var wifiCmd = &cobra.Command{
 			if strings.HasPrefix(linha, "Sinal") || strings.HasPrefix(linha, "Signal") {
 				partes := strings.SplitN(linha, ":", 2)
 				if len(partes) > 1 {
-					sinal := strings.TrimSpace(partes[1])
-					fmt.Printf("%-25s | Sinal: %s\n", currentSSID, sinal)
+					sinalRaw := strings.TrimSpace(partes[1]) // Ex: "92%"
+					
+					// Remove o símbolo de % e espaços para converter para número
+					sinalLimpo := strings.ReplaceAll(sinalRaw, "%", "")
+					sinalLimpo = strings.TrimSpace(sinalLimpo)
+					
+					// Converte o sinal em inteiro para aplicar a cor correspondente
+					sinalNum, err := strconv.Atoi(sinalLimpo)
+					
+					var sinalColorido string
+					if err != nil {
+						// Fallback caso falhe a conversão
+						sinalColorido = color.YellowString(sinalRaw)
+					} else {
+						// Lógica de cores do sinal
+						if sinalNum >= 75 {
+							sinalColorido = color.GreenString(sinalRaw)
+						} else if sinalNum >= 40 {
+							sinalColorido = color.YellowString(sinalRaw)
+						} else {
+							sinalColorido = color.RedString(sinalRaw)
+						}
+					}
+
+					// Printa o SSID com destaque e o sinal colorido correspondente
+					fmt.Printf("📶 %-25s | Sinal: %s\n", whiteBold(currentSSID), sinalColorido)
 				}
 			}
 		}
